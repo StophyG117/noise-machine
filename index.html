@@ -122,7 +122,7 @@
 
   <h2>Voices</h2>
   <div class="row" id="voiceOnRow">
-    <label class="chk"><input type="checkbox" id="voicesOn"> Distant voices in the scene</label>
+    <label class="chk"><input type="checkbox" id="voicesOn"> Distant voices</label>
   </div>
   <p class="note" id="voiceNote">Real recordings of public-domain audiobook readers (LibriVox). Far away, they blur into murmur.</p>
   <div id="voiceCtl">
@@ -142,6 +142,9 @@
       <div class="row"><label class="t" for="vOften">How often</label><input type="range" id="vOften" min="0" max="1" step="0.01"></div>
       <div class="row"><label class="t" for="vDist">Distance <span id="vDistVal"></span></label><input type="range" id="vDist" min="0" max="1" step="0.01"></div>
       <div class="row"><label class="t" for="vVol">Volume</label><input type="range" id="vVol" min="0" max="1" step="0.01"></div>
+    </div>
+    <div class="row" id="vInSceneRow">
+      <label class="chk"><input type="checkbox" id="vInScene"> Place voices inside the scene (its echo and space)</label>
     </div>
   </div>
 
@@ -167,8 +170,8 @@
       <div class="row"><label class="t" for="dVol">Volume</label><input type="range" id="dVol" min="0" max="1" step="0.01"></div>
       <div class="row"><label class="t" for="dDist">Distance <span id="dDistVal"></span></label><input type="range" id="dDist" min="0" max="1" step="0.01"></div>
     </div>
-    <div class="row">
-      <label class="chk"><input type="checkbox" id="dInScene"> Place clips inside the scene (echo and distance)</label>
+    <div class="row" id="dInSceneRow">
+      <label class="chk"><input type="checkbox" id="dInScene"> Place clips inside the scene (its echo and space)</label>
     </div>
     <p class="note" id="dropNow"></p>
   </div>
@@ -229,7 +232,7 @@ let S = { ...PRESETS.focus, preset:'focus', timer:0, guard:true, scene:'off', sc
 try { const saved = JSON.parse(localStorage.getItem(KEY)); if (saved) S = { ...S, ...saved }; } catch {}
 for (const k in SCENES) S.scenes[k] = { ...SCENES[k].defaults, ...(S.scenes[k] || {}) };
 const CLIPS = window.VOICE_CLIPS || [];
-S.rvoices = { on:false, style:'conversation', cast: CLIPS.map(c => c.id), often:.5, dist:.8, vol:.6, ...S.rvoices };
+S.rvoices = { on:false, style:'conversation', cast: CLIPS.map(c => c.id), often:.5, dist:.8, vol:.6, inScene:true, ...S.rvoices };
 S.rvoices.cast = S.rvoices.cast.filter(id => CLIPS.some(c => c.id === id));
 if (!S.rvoices.cast.length) S.rvoices.cast = CLIPS.map(c => c.id);
 S.drops = { on:false, often:.4, vol:.5, dist:.2, inScene:false, ...S.drops };
@@ -246,7 +249,7 @@ const MOODS = {
 const toneHz = t => Math.round(120 * Math.pow(50, t));   // 120 Hz .. 6 kHz low-pass
 
 // ---------- Audio graph ----------
-let ctx, noiseNode, noiseFilter, noiseGain, droneBus, droneGain, droneSend, sceneGain, master, droneTimer, countdown;
+let ctx, noiseNode, noiseFilter, noiseGain, droneBus, droneGain, droneSend, sceneGain, freeBus, master, droneTimer, countdown;
 let noiseBufs = [];
 let playing = false;
 
@@ -310,6 +313,13 @@ function init() {
     return buf;
   });
   sceneGain = ctx.createGain(); sceneGain.connect(master);
+
+  // Voices and clips that are not placed in a scene: mostly dry, with just a small room around them
+  const freeOut = ctx.createGain(); freeOut.gain.value = 0.55; freeOut.connect(master);
+  const freeVerb = ctx.createConvolver(); freeVerb.buffer = makeIR(0.8, .5, false);
+  const freeWet = ctx.createGain(); freeWet.gain.value = 0.3;
+  freeBus = { dry: freeOut, verbIn: ctx.createGain() };
+  freeBus.verbIn.connect(freeVerb).connect(freeWet).connect(freeOut);
 }
 
 // Reverb impulse: decaying noise that gets darker over time (like real rooms), optional early echoes off walls
@@ -363,11 +373,12 @@ function sceneBus(irSpec) {
   const verbOut = ctx.createGain(); verbIn.connect(verb).connect(verbOut).connect(out);
   return { out, dry, verbIn, verbOut };
 }
-// Put a sound somewhere in the space: further away = quieter and more reverb
-function place(sc, node, pan, dist) {
+// Put a sound somewhere in the space: further away = quieter and more reverb.
+// wetBoost adds extra reverb for sounds that should clearly sit inside the room even when close.
+function place(sc, node, pan, dist, wetBoost = 0) {
   const p = ctx.createStereoPanner(); p.pan.value = Math.max(-1, Math.min(1, pan));
   const d = ctx.createGain(); d.gain.value = 1 - dist * 0.75;
-  const w = ctx.createGain(); w.gain.value = 0.2 + dist * 0.8;
+  const w = ctx.createGain(); w.gain.value = 0.2 + dist * 0.8 + wetBoost;
   node.connect(p); p.connect(d).connect(sc.dry); p.connect(w).connect(sc.verbIn);
 }
 // Short burst of filtered noise: clicks, rustles, splashes, scuffs
@@ -653,7 +664,7 @@ function playUtterance(sc, t, it) {
   g.gain.setValueAtTime(1, t + it.dur - .4); g.gain.linearRampToValueAtTime(0, t + it.dur);
   const out = ctx.createGain(); out.gain.value = v.norm * S.rvoices.vol * S.rvoices.vol * 1.5 * (1 - .4 * it.dist);
   s.connect(hp).connect(air).connect(g).connect(out);
-  place(sc, out, it.pan, it.dist);
+  place(sc, out, it.pan, it.dist, sc === freeBus ? 0 : .3);
   s.start(t, it.start, it.dur + .05);
 }
 
@@ -803,7 +814,7 @@ async function playDrop() {
       comp.threshold.value = -20; comp.ratio.value = 8; comp.attack.value = .003; comp.release.value = .25;
       const out = ctx.createGain(); out.gain.value = norm * S.drops.vol * S.drops.vol * 1.6 * (1 - .4 * S.drops.dist);
       s.connect(env).connect(air).connect(comp).connect(out);
-      if (S.drops.inScene && scene) place(scene.sc, out, rnd(-.8, .8), S.drops.dist);
+      if (S.drops.inScene && scene) place(scene.sc, out, rnd(-.8, .8), S.drops.dist, .6);
       else { const p = ctx.createStereoPanner(); p.pan.value = rnd(-.4, .4); out.connect(p).connect(master); }
       s.start(t, 0, dur + .01);
       $('dropNow').textContent = '♪ ' + rec.name;
@@ -821,10 +832,10 @@ setInterval(() => {
 
 // Scheduler: plans events 1.5 s ahead so background-tab timer slowdowns never cause gaps
 setInterval(() => {
-  if (!playing || !scene) return;
-  scene.control();
-  scene.tick(ctx.currentTime + 1.5);
-  if (S.rvoices.on && CLIPS.length) voiceTick(scene.sc, ctx.currentTime + 1.5);
+  if (!playing) return;
+  if (scene) { scene.control(); scene.tick(ctx.currentTime + 1.5); }
+  // Voices run with or without a scene; outside one they get a small, mostly dry room
+  if (S.rvoices.on && CLIPS.length) voiceTick(S.rvoices.inScene && scene ? scene.sc : freeBus, ctx.currentTime + 1.5);
   else { vQueue = []; vNext = 0; }
 }, 250);
 
@@ -858,8 +869,8 @@ function renderVoices() {
   for (const b of $('vcast').children) b.classList.toggle('on', V.cast.includes(b.dataset.v));
   $('vOften').value = V.often; $('vDist').value = V.dist; $('vVol').value = V.vol;
   $('vDistVal').textContent = V.dist > .75 ? 'very far' : V.dist > .4 ? 'across the space' : 'nearby';
-  $('voiceCtl').classList.toggle('off', !V.on || S.scene === 'off');
-  $('voiceOnRow').classList.toggle('off', S.scene === 'off');
+  $('voiceCtl').classList.toggle('off', !V.on);
+  $('vInScene').checked = V.inScene;
 }
 
 function renderDrops() {
@@ -876,6 +887,11 @@ function renderDrops() {
 function render() {
   renderVoices();
   renderDrops();
+  // "Place inside the scene" options only mean something while a scene is on
+  for (const id of ['droneSpace', 'vInScene', 'dInScene']) {
+    $(id).disabled = S.scene === 'off';
+    $(id).closest('.row').classList.toggle('off', S.scene === 'off');
+  }
   for (const [id, key] of [['presets','preset'], ['color','color'], ['mood','mood'], ['scene','scene']])
     for (const btn of $(id).children) btn.classList.toggle('on', (btn.dataset.p || btn.dataset.v) === S[key]);
   $('presetName').textContent = S.preset ? '' : 'custom';
@@ -901,8 +917,10 @@ function applyAudio() {
   noiseGain.gain.setTargetAtTime(S.vol * S.vol * boost, t, 0.05);
   noiseFilter.frequency.setTargetAtTime(toneHz(S.tone), t, 0.05);
   droneBus.frequency.setTargetAtTime(MOODS[S.mood].cutoff, t, 1);
-  droneGain.gain.setTargetAtTime(S.drone ? S.dvol * S.dvol * 2 : 0, t, 0.3);
-  droneSend.gain.setTargetAtTime(S.drone && S.droneSpace ? S.dvol * S.dvol * 0.8 : 0, t, 0.3);
+  // Inside a scene, most of the drone moves into the scene's own reverb instead of just adding a little to it
+  const inside = S.droneSpace && S.scene !== 'off';
+  droneGain.gain.setTargetAtTime(S.drone ? S.dvol * S.dvol * 2 * (inside ? .35 : 1) : 0, t, 0.3);
+  droneSend.gain.setTargetAtTime(S.drone && inside ? S.dvol * S.dvol * 2.4 : 0, t, 0.3);
   sceneGain.gain.setTargetAtTime(S.sceneVol * S.sceneVol * 1.5, t, 0.1);
   if (S.drone && playing) startDrone(); else stopDrone();
 }
@@ -982,6 +1000,7 @@ for (const [id, k] of [['vOften','often'], ['vDist','dist'], ['vVol','vol']])
   $(id).oninput = () => { S.rvoices[k] = +$(id).value; save(); renderVoices(); };
 $('dropsOn').onchange = () => { S.drops.on = $('dropsOn').checked; save(); renderDrops(); };
 $('dInScene').onchange = () => { S.drops.inScene = $('dInScene').checked; save(); };
+$('vInScene').onchange = () => { S.rvoices.inScene = $('vInScene').checked; vQueue = []; vNext = 0; save(); };
 for (const [id, k] of [['dOften','often'], ['dVol','vol'], ['dDist','dist']])
   $(id).oninput = () => { S.drops[k] = +$(id).value; if (k === 'often') dropNext = 0; save(); renderDrops(); };
 $('addFiles').onclick = () => $('fileIn').click();
