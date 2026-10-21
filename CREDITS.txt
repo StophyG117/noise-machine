@@ -1,0 +1,10 @@
+Recorded voices used by NoiseMachine.html (voices.js)
+
+All recordings are from LibriVox (https://librivox.org) and are in the public domain.
+Only the first ~3 minutes of each chapter are included; the page skips the spoken LibriVox introduction.
+
+- Gord (English): Walden (Thoreau), read by Gord Mackenzie
+- Nick (English): Walden, Version 2 (Thoreau), read by Nick Bulka
+- Marcus (German): Walden oder Leben in den Waeldern (Thoreau), read by Marcus Christopher
+- Gemma (English): Meditations of the Emperor Marcus Aurelius, book 3, read by Gemma L Myers
+- Linda (English): Meditations of the Emperor Marcus Aurelius, book 12, read by Linda Johnson

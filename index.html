@@ -1,0 +1,1032 @@
+<!doctype html>
+<!--
+  Noise Machine - https://github.com/StophyG117/noise-machine
+  Copyright (C) 2026 StophyG117
+  SPDX-License-Identifier: GPL-3.0-or-later
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Noise Machine</title>
+<style>
+  :root { --bg:#1b1714; --panel:#26201c; --fg:#e9e1d8; --muted:#a3968a; --accent:#c08552; --line:#3a312a; }
+  * { box-sizing:border-box; }
+  body { margin:0; min-height:100vh; display:grid; place-items:center; background:var(--bg); color:var(--fg);
+         font:15px/1.4 "Segoe UI", system-ui, sans-serif; padding:24px 0; }
+  main { width:min(440px, 100% - 32px); background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:24px; }
+  h1 { margin:0 0 4px; font-size:20px; font-weight:600; }
+  h2 { margin:22px 0 12px; font-size:13px; font-weight:600; color:var(--accent); text-transform:uppercase; letter-spacing:.08em;
+       border-top:1px solid var(--line); padding-top:16px; }
+  p.sub { margin:0 0 18px; color:var(--muted); font-size:13px; }
+  .row { margin-bottom:14px; }
+  label.t { display:flex; justify-content:space-between; font-size:12px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); margin-bottom:6px; }
+  label.t span { text-transform:none; letter-spacing:0; }
+  .seg { display:flex; gap:6px; flex-wrap:wrap; }
+  .seg button { flex:1; min-width:70px; padding:8px 4px; background:transparent; color:var(--fg); border:1px solid var(--line); border-radius:8px; cursor:pointer; font:inherit; font-size:14px; }
+  .seg button.on { background:var(--accent); border-color:var(--accent); color:#1b1714; font-weight:600; }
+  input[type=range] { width:100%; accent-color:var(--accent); }
+  .chk { display:flex; align-items:center; gap:8px; cursor:pointer; }
+  .chk input { accent-color:var(--accent); width:16px; height:16px; flex:none; }
+  #play { width:100%; margin-top:8px; padding:14px; font:600 16px "Segoe UI", sans-serif; border:none; border-radius:10px; background:var(--accent); color:#1b1714; cursor:pointer; }
+  #play.on { background:var(--line); color:var(--fg); }
+  .timer { display:flex; gap:8px; align-items:center; }
+  .timer select { flex:1; background:var(--bg); color:var(--fg); border:1px solid var(--line); border-radius:8px; padding:6px; font:inherit; }
+  #left { color:var(--muted); font-size:13px; min-width:60px; text-align:right; }
+  .off { opacity:.45; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:4px 16px; }
+  .note { color:var(--muted); font-size:12px; margin:-4px 0 12px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Noise Machine</h1>
+  <p class="sub">Generated live, never loops. Settings are remembered.</p>
+
+  <div class="row">
+    <label class="t">Preset <span id="presetName"></span></label>
+    <div class="seg" id="presets">
+      <button data-p="focus">Focus</button>
+      <button data-p="deep">Deep work</button>
+      <button data-p="calm">Calm</button>
+      <button data-p="wind">Wind down</button>
+    </div>
+  </div>
+
+  <h2>Noise</h2>
+  <div class="row">
+    <div class="seg" id="color">
+      <button data-v="brown">Brown</button>
+      <button data-v="pink">Pink</button>
+      <button data-v="white">White</button>
+      <button data-v="off">None</button>
+    </div>
+  </div>
+  <div class="row">
+    <label class="t" for="vol">Volume</label>
+    <input type="range" id="vol" min="0" max="1" step="0.01">
+  </div>
+  <div class="row">
+    <label class="t" for="tone">Tone <span id="toneVal"></span></label>
+    <input type="range" id="tone" min="0" max="1" step="0.01">
+  </div>
+  <div class="row">
+    <label class="t" for="width">Stereo width <span id="widthVal"></span></label>
+    <input type="range" id="width" min="0" max="1" step="0.01">
+  </div>
+
+  <h2>Drone</h2>
+  <div class="row">
+    <label class="chk"><input type="checkbox" id="drone"> Ambient drone layer</label>
+  </div>
+  <div id="droneCtl">
+    <div class="row">
+      <label class="t" for="dvol">Volume</label>
+      <input type="range" id="dvol" min="0" max="1" step="0.01">
+    </div>
+    <div class="row">
+      <label class="t">Mood</label>
+      <div class="seg" id="mood">
+        <button data-v="warm">Warm</button>
+        <button data-v="dreamy">Dreamy</button>
+        <button data-v="dark">Dark</button>
+        <button data-v="sparse">Open</button>
+      </div>
+    </div>
+    <div class="row">
+      <label class="t" for="density">Density <span id="densityVal"></span></label>
+      <input type="range" id="density" min="0" max="1" step="0.01">
+    </div>
+  </div>
+
+  <h2>Scene</h2>
+  <div class="row">
+    <div class="seg" id="scene">
+      <button data-v="off">Off</button>
+      <button data-v="cave">Cave</button>
+      <button data-v="forest">Forest</button>
+      <button data-v="dock">Dock</button>
+    </div>
+  </div>
+  <div id="sceneCtl">
+    <p class="note" id="sceneNote"></p>
+    <div class="row">
+      <label class="t" for="sceneVol">Scene volume</label>
+      <input type="range" id="sceneVol" min="0" max="1" step="0.01">
+    </div>
+    <div class="grid" id="layers"></div>
+    <div class="row">
+      <label class="chk"><input type="checkbox" id="droneSpace"> Place the drone inside this space</label>
+    </div>
+  </div>
+
+  <h2>Voices</h2>
+  <div class="row" id="voiceOnRow">
+    <label class="chk"><input type="checkbox" id="voicesOn"> Distant voices in the scene</label>
+  </div>
+  <p class="note" id="voiceNote">Real recordings of public-domain audiobook readers (LibriVox). Far away, they blur into murmur.</p>
+  <div id="voiceCtl">
+    <div class="row">
+      <label class="t">Style</label>
+      <div class="seg" id="vstyle">
+        <button data-v="conversation">Conversation</button>
+        <button data-v="reading">Reading</button>
+        <button data-v="murmur">Murmur</button>
+      </div>
+    </div>
+    <div class="row">
+      <label class="t">Voices <span>tap to include</span></label>
+      <div class="seg" id="vcast"></div>
+    </div>
+    <div class="grid">
+      <div class="row"><label class="t" for="vOften">How often</label><input type="range" id="vOften" min="0" max="1" step="0.01"></div>
+      <div class="row"><label class="t" for="vDist">Distance <span id="vDistVal"></span></label><input type="range" id="vDist" min="0" max="1" step="0.01"></div>
+      <div class="row"><label class="t" for="vVol">Volume</label><input type="range" id="vVol" min="0" max="1" step="0.01"></div>
+    </div>
+  </div>
+
+  <h2>Sound drops</h2>
+  <div class="row">
+    <label class="chk"><input type="checkbox" id="dropsOn"> Play random clips now and then</label>
+  </div>
+  <div id="dropZone" class="row" style="border:1px dashed var(--line);border-radius:10px;padding:12px;text-align:center">
+    <div id="dropCount" class="note" style="margin:0 0 8px">No clips stored yet.</div>
+    <div class="seg">
+      <button id="addFiles">Add files…</button>
+      <button id="addFolder">Add folder…</button>
+      <button id="dropTest">Play one</button>
+      <button id="dropClear">Clear all</button>
+    </div>
+    <div class="note" style="margin:8px 0 0">Or drag audio files or folders here. MP3, WAV, OGG, M4A, FLAC, OPUS.</div>
+    <input type="file" id="fileIn" accept="audio/*,.mp3,.wav,.ogg,.m4a,.aac,.flac,.opus,.webm" multiple hidden>
+    <input type="file" id="folderIn" webkitdirectory multiple hidden>
+  </div>
+  <div id="dropCtl">
+    <div class="grid">
+      <div class="row"><label class="t" for="dOften">How often <span id="dOftenVal"></span></label><input type="range" id="dOften" min="0" max="1" step="0.01"></div>
+      <div class="row"><label class="t" for="dVol">Volume</label><input type="range" id="dVol" min="0" max="1" step="0.01"></div>
+      <div class="row"><label class="t" for="dDist">Distance <span id="dDistVal"></span></label><input type="range" id="dDist" min="0" max="1" step="0.01"></div>
+    </div>
+    <div class="row">
+      <label class="chk"><input type="checkbox" id="dInScene"> Place clips inside the scene (echo and distance)</label>
+    </div>
+    <p class="note" id="dropNow"></p>
+  </div>
+
+  <h2>Timer</h2>
+  <div class="row">
+    <div class="timer">
+      <select id="timer">
+        <option value="0">No timer</option><option value="15">Fade out in 15 min</option><option value="30">Fade out in 30 min</option>
+        <option value="60">Fade out in 1 hour</option><option value="120">Fade out in 2 hours</option><option value="240">Fade out in 4 hours</option>
+      </select>
+      <span id="left"></span>
+    </div>
+  </div>
+
+  <div class="row">
+    <label class="chk"><input type="checkbox" id="guard"> Stop instantly if headphones or any audio device is unplugged</label>
+  </div>
+
+  <button id="play">Play</button>
+  <p id="status" class="sub" style="margin:12px 0 0;text-align:center">Stopped · space bar toggles</p>
+</main>
+
+<script src="voices.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const setStatus = msg => { $('status').textContent = msg; };
+const rnd = (a, b) => a + Math.random() * (b - a);
+const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+const expRand = mean => -Math.log(1 - Math.random()) * mean;   // random gaps that feel natural, not metronomic
+
+// ---------- Settings, presets, persistence ----------
+const PRESETS = {
+  focus: { color:'brown', vol:.45, tone:.45, width:.85, drone:true,  dvol:.55, mood:'warm',   density:.4  },
+  deep:  { color:'brown', vol:.55, tone:.30, width:1,   drone:false, dvol:.5,  mood:'warm',   density:.4  },
+  calm:  { color:'brown', vol:.35, tone:.35, width:.9,  drone:true,  dvol:.6,  mood:'dreamy', density:.55 },
+  wind:  { color:'brown', vol:.30, tone:.20, width:1,   drone:true,  dvol:.5,  mood:'dark',   density:.25 },
+};
+
+// Scenes: each layer is a 0..1 slider. "space" is how much of the room/air you hear.
+const SCENES = {
+  cave:   { note:'A vast cavern: drips from the ceiling, a distant trickle, the odd shifting pebble.',
+            layers:[['drips','Drips'],['trickle','Trickle'],['pebbles','Pebbles'],['air','Cave air'],['space','Space']],
+            defaults:{ drips:.5, trickle:.35, pebbles:.3, air:.5, space:.75 },
+            ir:{ secs:9, damp:.9, early:true } },
+  forest: { note:'Wind moving through trees: gusts, rustling leaves, a faint whistle in strong gusts.',
+            layers:[['wind','Wind'],['gusts','Gustiness'],['leaves','Leaves'],['whistle','Whistle'],['space','Space']],
+            defaults:{ wind:.5, gusts:.5, leaves:.5, whistle:.2, space:.3 },
+            ir:{ secs:1.8, damp:.6, early:false } },
+  dock:   { note:'Sitting on a wooden dock: water lapping at the posts, small waves on the shore, creaking boards.',
+            layers:[['lapping','Lapping'],['waves','Waves'],['creaks','Creaks'],['breeze','Breeze'],['space','Space']],
+            defaults:{ lapping:.6, waves:.5, creaks:.25, breeze:.3, space:.25 },
+            ir:{ secs:1.0, damp:.5, early:false } },
+};
+
+const KEY = 'noiseMachine.v2';
+let S = { ...PRESETS.focus, preset:'focus', timer:0, guard:true, scene:'off', sceneVol:.6, droneSpace:true, scenes:{} };
+try { const saved = JSON.parse(localStorage.getItem(KEY)); if (saved) S = { ...S, ...saved }; } catch {}
+for (const k in SCENES) S.scenes[k] = { ...SCENES[k].defaults, ...(S.scenes[k] || {}) };
+const CLIPS = window.VOICE_CLIPS || [];
+S.rvoices = { on:false, style:'conversation', cast: CLIPS.map(c => c.id), often:.5, dist:.8, vol:.6, ...S.rvoices };
+S.rvoices.cast = S.rvoices.cast.filter(id => CLIPS.some(c => c.id === id));
+if (!S.rvoices.cast.length) S.rvoices.cast = CLIPS.map(c => c.id);
+S.drops = { on:false, often:.4, vol:.5, dist:.2, inScene:false, ...S.drops };
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch {} };
+
+// Drone moods: note pool (Hz), filter brightness, voice length
+const MOODS = {
+  warm:   { notes:[130.81,146.83,164.81,196.00,220.00,261.63,293.66,329.63,392.00], cutoff:900, life:[10,18] }, // C major pentatonic
+  dreamy: { notes:[174.61,196.00,220.00,246.94,261.63,329.63,349.23,392.00,440.00], cutoff:1300, life:[12,20] }, // F Lydian
+  dark:   { notes:[73.42,110.00,146.83,174.61,196.00,220.00,261.63],               cutoff:550, life:[14,24] }, // D minor, low
+  sparse: { notes:[55.00,110.00,164.81,220.00,329.63],                              cutoff:700, life:[16,28] }, // open fifths on A
+};
+
+const toneHz = t => Math.round(120 * Math.pow(50, t));   // 120 Hz .. 6 kHz low-pass
+
+// ---------- Audio graph ----------
+let ctx, noiseNode, noiseFilter, noiseGain, droneBus, droneGain, droneSend, sceneGain, master, droneTimer, countdown;
+let noiseBufs = [];
+let playing = false;
+
+// Each channel gets its own generator so left and right can be fully independent
+function makeGen() {
+  let b = 0; const p = [0,0,0,0,0,0,0];
+  return () => {
+    const w = Math.random() * 2 - 1;
+    if (S.color === 'brown') {
+      b = (b + 0.02 * w) / 1.02;          // leaky integrator: 1/f^2, never drifts
+      return b * 3.5;
+    }
+    if (S.color === 'pink') {             // Paul Kellet's refined pink filter
+      p[0] = 0.99886*p[0] + w*0.0555179; p[1] = 0.99332*p[1] + w*0.0750759;
+      p[2] = 0.96900*p[2] + w*0.1538520; p[3] = 0.86650*p[3] + w*0.3104856;
+      p[4] = 0.55000*p[4] + w*0.5329522; p[5] = -0.7616*p[5] - w*0.0168980;
+      const s = (p[0]+p[1]+p[2]+p[3]+p[4]+p[5]+p[6] + w*0.5362) * 0.11;
+      p[6] = w * 0.115926;
+      return s;
+    }
+    if (S.color === 'white') return w * 0.3;
+    return 0;
+  };
+}
+const genA = makeGen(), genB = makeGen();
+
+function init() {
+  ctx = new AudioContext();
+  master = ctx.createGain(); master.gain.value = 0; master.connect(ctx.destination);
+
+  noiseNode = ctx.createScriptProcessor(4096, 0, 2);
+  noiseNode.onaudioprocess = e => {
+    const L = e.outputBuffer.getChannelData(0), R = e.outputBuffer.getChannelData(1);
+    // Width 0 = identical in both ears; 1 = independent. Constant-power blend keeps loudness steady.
+    const th = S.width * Math.PI / 2, c = Math.cos(th), s = Math.sin(th);
+    for (let i = 0; i < L.length; i++) {
+      const a = genA(), b = genB();
+      L[i] = a; R[i] = a * c + b * s;
+    }
+  };
+  noiseFilter = ctx.createBiquadFilter(); noiseFilter.type = 'lowpass'; noiseFilter.Q.value = 0.5;
+  noiseGain = ctx.createGain();
+  noiseNode.connect(noiseFilter).connect(noiseGain).connect(master);
+
+  // Drone: voices -> low-pass -> reverb + dry -> gain
+  droneGain = ctx.createGain(); droneGain.gain.value = 0;
+  const verb = ctx.createConvolver(); verb.buffer = makeIR(6, 0, false);
+  const dry = ctx.createGain(); dry.gain.value = 0.35;
+  droneBus = ctx.createBiquadFilter(); droneBus.type = 'lowpass';
+  droneBus.connect(verb).connect(droneGain);
+  droneBus.connect(dry).connect(droneGain);
+  droneGain.connect(master);
+  droneSend = ctx.createGain(); droneSend.gain.value = 0;   // drone -> current scene's reverb
+  droneBus.connect(droneSend);
+
+  // Scenes share a few seconds of white noise (lengths differ so the buffers never line up)
+  noiseBufs = [7.3, 9.1, 11.7].map(secs => {
+    const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * secs), ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    return buf;
+  });
+  sceneGain = ctx.createGain(); sceneGain.connect(master);
+}
+
+// Reverb impulse: decaying noise that gets darker over time (like real rooms), optional early echoes off walls
+function makeIR(secs, damp, early) {
+  const sr = ctx.sampleRate, len = Math.floor(sr * secs), buf = ctx.createBuffer(2, len, sr);
+  for (let ch = 0; ch < 2; ch++) {
+    const d = buf.getChannelData(ch);
+    let lp = 0;
+    for (let i = 0; i < len; i++) {
+      const t = i / len;
+      const x = (Math.random() * 2 - 1) * (damp ? Math.exp(-6.9 * t) : Math.pow(1 - t, 3));
+      lp += (x - lp) * (1 - damp * Math.sqrt(t) * 0.97);
+      d[i] = lp;
+    }
+    if (early) for (let k = 0; k < 10; k++) d[Math.floor(sr * rnd(0.02, 0.3))] += rnd(-0.5, 0.5);
+  }
+  return buf;
+}
+
+// ---------- Drone ----------
+function droneVoice() {
+  const m = MOODS[S.mood], now = ctx.currentTime;
+  const life = m.life[0] + Math.random() * (m.life[1] - m.life[0]);
+  const f = m.notes[Math.floor(Math.random() * m.notes.length)];
+  const lowBoost = f < 120 ? 1.6 : 1;  // low notes sound quieter, lift them a little
+  const g = ctx.createGain();
+  const pan = ctx.createStereoPanner(); pan.pan.value = Math.random() * 1.2 - 0.6;
+  g.gain.setValueAtTime(0, now);
+  g.gain.linearRampToValueAtTime(0.06 * lowBoost, now + life * 0.4);
+  g.gain.linearRampToValueAtTime(0, now + life);
+  g.connect(pan).connect(droneBus);
+  for (const det of [-4, 4]) {            // two slightly detuned sines = gentle chorus
+    const o = ctx.createOscillator();
+    o.type = 'sine'; o.frequency.value = f; o.detune.value = det;
+    o.connect(g); o.start(now); o.stop(now + life + 0.1);
+  }
+}
+// Density sets the gap between new notes: 9 s (sparse) .. 1.8 s (dense)
+const droneGap = () => (9 - S.density * 7.2) * (0.7 + Math.random() * 0.6) * 1000;
+function scheduleDrone() { droneTimer = setTimeout(() => { droneVoice(); scheduleDrone(); }, droneGap()); }
+function startDrone() { if (droneTimer) return; droneVoice(); droneVoice(); scheduleDrone(); }
+function stopDrone() { clearTimeout(droneTimer); droneTimer = null; }
+
+// ---------- Scene engine ----------
+// Each scene gets its own bus: dry path + its own reverb, so scenes can cross-fade.
+function sceneBus(irSpec) {
+  const out = ctx.createGain(); out.gain.value = 0; out.connect(sceneGain);
+  const dry = ctx.createGain(); dry.connect(out);
+  const verbIn = ctx.createGain();
+  const verb = ctx.createConvolver(); verb.buffer = makeIR(irSpec.secs, irSpec.damp, irSpec.early);
+  const verbOut = ctx.createGain(); verbIn.connect(verb).connect(verbOut).connect(out);
+  return { out, dry, verbIn, verbOut };
+}
+// Put a sound somewhere in the space: further away = quieter and more reverb
+function place(sc, node, pan, dist) {
+  const p = ctx.createStereoPanner(); p.pan.value = Math.max(-1, Math.min(1, pan));
+  const d = ctx.createGain(); d.gain.value = 1 - dist * 0.75;
+  const w = ctx.createGain(); w.gain.value = 0.2 + dist * 0.8;
+  node.connect(p); p.connect(d).connect(sc.dry); p.connect(w).connect(sc.verbIn);
+}
+// Short burst of filtered noise: clicks, rustles, splashes, scuffs
+function grain(t, dur, type, f, Q, amp, attack = 0.002) {
+  const s = ctx.createBufferSource(); s.buffer = pick(noiseBufs);
+  const fl = ctx.createBiquadFilter(); fl.type = type; fl.frequency.value = f; fl.Q.value = Q;
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(amp, t + attack);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  s.connect(fl).connect(g);
+  s.start(t, rnd(0, s.buffer.duration - dur - 0.2), dur + 0.05);
+  return g;
+}
+// Water drop: a sine that chirps upward as the bubble resonates
+function drop(sc, t, f0, ratio, dur, amp, pan, dist) {
+  const o = ctx.createOscillator(); o.type = 'sine';
+  o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f0 * ratio, t + dur * 0.6);
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(amp, t + 0.002);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g); o.start(t); o.stop(t + dur + 0.02);
+  place(sc, g, pan, dist);
+}
+// Continuous stereo noise bed through one filter (wind, air, waves)
+function bed(type, f, Q) {
+  const merge = ctx.createChannelMerger(2);
+  const srcs = [0, 1].map(ch => {
+    const s = ctx.createBufferSource(); s.buffer = noiseBufs[ch]; s.loop = true;
+    s.connect(merge, 0, ch); s.start(ctx.currentTime, rnd(0, s.buffer.duration)); return s;
+  });
+  const fl = ctx.createBiquadFilter(); fl.type = type; fl.frequency.value = f; fl.Q.value = Q;
+  const g = ctx.createGain(); g.gain.value = 0;
+  merge.connect(fl).connect(g);
+  return { srcs, f: fl.frequency, g: g.gain, out: g };
+}
+// Event stream whose rate (events/second) can change live
+function layer(rate, fire) {
+  let next = ctx.currentTime + rnd(0.3, 3);
+  return horizon => {
+    if (next < ctx.currentTime) next = ctx.currentTime + 0.05;
+    while (next < horizon) {
+      const r = rate();
+      if (r <= 0) { next += 1; continue; }
+      fire(next); next += expRand(1 / r);
+    }
+  };
+}
+const ramp = (param, v, tc = 0.4) => param.setTargetAtTime(v, ctx.currentTime, tc);
+
+// Wind shared by forest and dock: gust follows a slow random walk
+function makeWind(sc) {
+  const body = bed('bandpass', 400, 0.7), rumble = bed('lowpass', 110, 0.7);
+  const whistles = [bed('bandpass', 900, 22), bed('bandpass', 1400, 28)];
+  body.out.connect(sc.dry); body.out.connect(sc.verbIn); rumble.out.connect(sc.dry);
+  for (const w of whistles) { w.out.connect(sc.dry); w.out.connect(sc.verbIn); }
+  let gust = 0, target = 0, nextTarget = 0;
+  return {
+    get gust() { return gust; },
+    srcs: [body, rumble, ...whistles].flatMap(b => b.srcs),
+    update(strength, gustiness, whistle) {
+      const now = ctx.currentTime;
+      if (now > nextTarget) { target = strength * (0.35 + gustiness * rnd(0, 1.1)); nextTarget = now + rnd(2, 8); }
+      gust += (target - gust) * 0.08;
+      ramp(body.g, (0.03 + gust) * 2.5);
+      ramp(body.f, 220 + gust * 650);
+      ramp(rumble.g, gust * 1.2);
+      whistles.forEach((w, i) => {
+        ramp(w.g, whistle * Math.max(0, gust - 0.35) * 3.5);
+        ramp(w.f, (i ? 1350 : 850) + gust * 500 + rnd(-40, 40), 1);
+      });
+    },
+  };
+}
+
+const BUILD = {
+  cave(sc, P) {
+    // Drips come from a handful of fixed spots in the ceiling, each with its own rhythm and pitch
+    const newSpot = () => ({ pan:rnd(-.9, .9), dist:rnd(.15, .95), f:rnd(450, 1300), period:rnd(1.3, 7), next:ctx.currentTime + rnd(.3, 4) });
+    const spots = Array.from({ length:5 }, newSpot);
+    let respawn = ctx.currentTime + 120;
+    const tPan = rnd(-.7, .7);
+    const air = bed('lowpass', 160, 0.7), hush = bed('bandpass', 350, 0.6), stream = bed('bandpass', 2200, 1.2);
+    air.out.connect(sc.dry); hush.out.connect(sc.verbIn);
+    const sp = ctx.createStereoPanner(); sp.pan.value = tPan; stream.out.connect(sp); sp.connect(sc.dry); sp.connect(sc.verbIn);
+    let wob = 1;
+    const trickle = layer(() => P.trickle * 22, t =>
+      drop(sc, t, rnd(1400, 3800), 1.6, rnd(.02, .05), P.trickle * rnd(.02, .075), tPan + rnd(-.08, .08), .55));
+    const pebbles = layer(() => P.pebbles * 0.12, t => {
+      const pan = rnd(-.9, .9), dist = rnd(.45, .95), n = 2 + Math.floor(rnd(0, 4 + P.pebbles * 8));
+      let tt = t, a = rnd(.25, .6);
+      for (let i = 0; i < n; i++) {
+        place(sc, grain(tt, rnd(.008, .03), 'bandpass', rnd(900, 4000), rnd(1.5, 5), a), pan + rnd(-.05, .05), dist);
+        tt += rnd(.03, .25) * (i < 2 ? 1 : rnd(.5, 1.5)); a *= rnd(.7, .95);
+      }
+      if (Math.random() < .4) {   // a heavier rock settling
+        const o = ctx.createOscillator(), g = ctx.createGain(), th = t + rnd(0, .3);
+        o.frequency.value = rnd(55, 100);
+        g.gain.setValueAtTime(0, th); g.gain.linearRampToValueAtTime(.25, th + .005); g.gain.exponentialRampToValueAtTime(.0001, th + .25);
+        o.connect(g); o.start(th); o.stop(th + .3); place(sc, g, pan, dist);
+      }
+    });
+    return {
+      srcs: [air, hush, stream].flatMap(b => b.srcs),
+      control() {
+        wob = Math.max(.7, Math.min(1.3, wob + rnd(-.03, .03)));
+        ramp(air.g, P.air * P.air * 3 * wob, 1); ramp(hush.g, P.air * 0.1, 1);
+        ramp(stream.g, P.trickle * 0.08 * rnd(.8, 1.2), .5);
+        ramp(sc.verbOut.gain, P.space * 1.6);
+      },
+      tick(h) {
+        const now = ctx.currentTime;
+        if (now > respawn) { spots[Math.floor(rnd(0, 5))] = newSpot(); respawn = now + rnd(90, 240); }
+        const active = Math.round(P.drips * 5), scale = 1 / (.35 + P.drips * .9);
+        spots.forEach((s, i) => {
+          if (s.next < now) s.next = now + rnd(0, s.period);
+          while (s.next < h) {
+            if (i < active) {
+              const amp = .22 * (1 - s.dist * .55);
+              drop(sc, s.next, s.f * rnd(.97, 1.03), rnd(2, 2.8), rnd(.07, .14), amp, s.pan, s.dist);
+              place(sc, grain(s.next, .012, 'highpass', 4000, .7, amp * .15), s.pan, s.dist);
+            }
+            s.next += s.period * scale * rnd(.85, 1.15);
+          }
+        });
+        trickle(h); pebbles(h);
+      },
+    };
+  },
+
+  forest(sc, P) {
+    const wind = makeWind(sc);
+    const leaves = layer(() => P.leaves * (3 + wind.gust * 70), t =>
+      place(sc, grain(t, rnd(.015, .07), 'bandpass', rnd(2500, 8000), rnd(.7, 2), rnd(.06, .24) * P.leaves * (.5 + wind.gust)),
+            rnd(-.9, .9), rnd(.15, .8)));
+    return {
+      srcs: wind.srcs,
+      control() { wind.update(P.wind, P.gusts, P.whistle); ramp(sc.verbOut.gain, P.space * 1.6); },
+      tick(h) { leaves(h); },
+    };
+  },
+
+  dock(sc, P) {
+    const wind = makeWind(sc);
+    const sea = bed('lowpass', 350, 0.7), foam = bed('highpass', 2500, 0.7);
+    sea.out.connect(sc.dry); sea.out.connect(sc.verbIn); foam.out.connect(sc.dry);
+    let nextWave = ctx.currentTime + 0.5, firstWave = true;
+    const knock = t => {   // hull or post knocking against the dock
+      const pan = rnd(-.6, .6), f = rnd(350, 650);
+      for (const dt of Math.random() < .5 ? [0, rnd(.15, .4)] : [0]) {
+        place(sc, grain(t + dt, .09, 'bandpass', f, 9, .5), pan, .25);
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.frequency.value = f / 2.2;
+        g.gain.setValueAtTime(0, t + dt); g.gain.linearRampToValueAtTime(.15, t + dt + .003); g.gain.exponentialRampToValueAtTime(.0001, t + dt + .12);
+        o.connect(g); o.start(t + dt); o.stop(t + dt + .15); place(sc, g, pan, .25);
+      }
+    };
+    const lapping = layer(() => P.lapping * .55, t => {
+      const pan = rnd(-.5, .5), n = Math.random() < .35 ? 2 + Math.floor(rnd(0, 2)) : 1;
+      let tt = t;
+      for (let k = 0; k < n; k++) {
+        const dur = rnd(.25, .7), amp = rnd(.45, 1) * P.lapping * (k ? .6 : 1);
+        const s = ctx.createBufferSource(); s.buffer = pick(noiseBufs);
+        const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.Q.value = 1.5;
+        lp.frequency.setValueAtTime(rnd(700, 1400), tt); lp.frequency.exponentialRampToValueAtTime(rnd(180, 300), tt + dur);
+        const g = ctx.createGain(), att = rnd(.02, .08);
+        g.gain.setValueAtTime(0, tt); g.gain.linearRampToValueAtTime(amp, tt + att); g.gain.exponentialRampToValueAtTime(.0001, tt + dur);
+        s.connect(lp).connect(g); s.start(tt, rnd(0, 5), dur + .1);
+        place(sc, g, pan, rnd(.05, .3));
+        if (Math.random() < .5) place(sc, grain(tt + att, .15, 'bandpass', rnd(150, 260), 7, amp * .8), pan, .2);  // hollow "clop" under the boards
+        tt += rnd(.15, .35);
+      }
+      if (Math.random() < .07) knock(t + rnd(.1, .5));
+    });
+    const creaks = layer(() => P.creaks * .06, t => {
+      // Wood creak = stick-slip friction: a low buzzing pulse with a wandering rate, through wood resonances
+      const dur = rnd(.5, 1.6), base = rnd(18, 40), curve = new Float32Array(20);
+      let v = 1; for (let i = 0; i < 20; i++) { v = Math.max(.6, Math.min(1.5, v + rnd(-.12, .12))); curve[i] = base * v; }
+      const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.setValueCurveAtTime(curve, t, dur);
+      const g = ctx.createGain(), amp = 1.5 * P.creaks;
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(amp, t + .15);
+      g.gain.setValueAtTime(amp, t + dur - .3); g.gain.linearRampToValueAtTime(0, t + dur);
+      for (const [f, q] of [[rnd(500, 900), 12], [rnd(1300, 2200), 10]]) {
+        const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = f; bp.Q.value = q;
+        o.connect(bp).connect(g);
+      }
+      o.start(t); o.stop(t + dur + .05); place(sc, g, rnd(-.8, .8), rnd(.1, .4));
+    });
+    return {
+      srcs: [...wind.srcs, ...sea.srcs, ...foam.srcs],
+      control() { wind.update(P.breeze * .7, .4, 0); ramp(sc.verbOut.gain, P.space * 1.6); },
+      tick(h) {
+        // Small waves rolling onto the shore nearby: swell, break into foam, wash back
+        while (nextWave < h) {
+          const t = Math.max(nextWave, ctx.currentTime), period = rnd(7, 13), amp = P.waves * rnd(.6, 1.2);
+          if (firstWave) { sea.g.setValueAtTime(0, t); firstWave = false; }
+          sea.g.linearRampToValueAtTime(amp, t + period * .45); sea.g.linearRampToValueAtTime(amp * .08, t + period);
+          sea.f.setValueAtTime(350, t);
+          sea.f.linearRampToValueAtTime(rnd(900, 1600), t + period * .45); sea.f.linearRampToValueAtTime(300, t + period);
+          foam.g.setValueAtTime(0, t + period * .3);
+          foam.g.linearRampToValueAtTime(amp * .06, t + period * .55); foam.g.linearRampToValueAtTime(0, t + period * .9);
+          nextWave = t + period;
+        }
+        lapping(h); creaks(h);
+      },
+    };
+  },
+};
+
+let scene = null;
+function startScene() {
+  if (!playing || S.scene === 'off' || scene) return;
+  const sc = sceneBus(SCENES[S.scene].ir);
+  scene = BUILD[S.scene](sc, S.scenes[S.scene]);
+  scene.sc = sc;
+  scene.control();
+  sc.out.gain.setTargetAtTime(1, ctx.currentTime, 0.6);
+  droneSend.connect(sc.verbIn);
+}
+function stopScene(fadeSecs = 1.5) {
+  const old = scene; if (!old) return;
+  scene = null;
+  try { droneSend.disconnect(old.sc.verbIn); } catch {}
+  old.sc.out.gain.setTargetAtTime(0, ctx.currentTime, fadeSecs / 4);
+  setTimeout(() => { for (const s of old.srcs) try { s.stop(); } catch {} old.sc.out.disconnect(); }, fadeSecs * 1000 + 3000);
+}
+// ---------- Recorded voices (LibriVox readers, from voices.js) ----------
+// Each recording is decoded at 16 kHz (plenty for distant speech, light on memory), then split at its
+// natural pauses so every phrase starts and ends between words.
+const SKIP_INTRO = 40;   // seconds: each LibriVox chapter opens with a spoken disclaimer
+let voiceBank = null;    // id -> { buf, pauses, norm }
+
+async function loadVoices() {
+  if (voiceBank || !CLIPS.length) return;
+  voiceBank = {};
+  const dec = new OfflineAudioContext(1, 1, 16000);
+  for (const c of CLIPS) {
+    try {
+      const bin = atob(c.data), bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      voiceBank[c.id] = analyseVoice(await dec.decodeAudioData(bytes.buffer));
+    } catch (err) { console.warn('voice ' + c.id + ' failed to decode', err); }
+  }
+}
+
+function analyseVoice(buf) {
+  const d = buf.getChannelData(0), win = Math.floor(buf.sampleRate * .05), env = [];
+  for (let i = 0; i + win <= d.length; i += win) {
+    let s = 0; for (let j = 0; j < win; j++) s += d[i + j] * d[i + j];
+    env.push(Math.sqrt(s / win));
+  }
+  const sorted = [...env].sort((a, b) => a - b);
+  const quiet = sorted[Math.floor(env.length * .1)], speech = sorted[Math.floor(env.length * .7)];
+  const th = quiet + (speech - quiet) * .15;
+  // Pauses = at least 250 ms below the threshold; keep their midpoints, away from the intro and the cut-off end
+  const pauses = []; let run = 0;
+  env.forEach((e, k) => {
+    if (e < th) { run++; return; }
+    if (run >= 5) { const p = (k - run / 2) * .05; if (p > SKIP_INTRO && p < buf.duration - 2) pauses.push(p); }
+    run = 0;
+  });
+  return { buf, pauses, norm: .08 / Math.max(speech, 1e-4) };   // evens out loud and quiet readers
+}
+
+// A stretch of speech between two pauses, roughly minS..maxS seconds long
+function utterance(id, minS, maxS) {
+  const P = voiceBank[id].pauses;
+  for (let tries = 0; tries < 20 && P.length > 1; tries++) {
+    const i = Math.floor(rnd(0, P.length - 1)), target = rnd(minS, maxS);
+    let j = i + 1;
+    while (j < P.length && P[j] - P[i] < target) j++;
+    if (j < P.length && P[j] - P[i] <= maxS * 1.5) return { start: P[i], dur: P[j] - P[i] };
+  }
+  return { start: P[0] || SKIP_INTRO, dur: minS };
+}
+
+function playUtterance(sc, t, it) {
+  const v = voiceBank[it.id];
+  const s = ctx.createBufferSource(); s.buffer = v.buf;
+  const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 120;
+  const air = ctx.createBiquadFilter(); air.type = 'lowpass'; air.frequency.value = 300 + 6500 * (1 - .85 * it.dist);  // far = muffled
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(1, t + .12);
+  g.gain.setValueAtTime(1, t + it.dur - .4); g.gain.linearRampToValueAtTime(0, t + it.dur);
+  const out = ctx.createGain(); out.gain.value = v.norm * S.rvoices.vol * S.rvoices.vol * 1.5 * (1 - .4 * it.dist);
+  s.connect(hp).connect(air).connect(g).connect(out);
+  place(sc, out, it.pan, it.dist);
+  s.start(t, it.start, it.dur + .05);
+}
+
+// One group of voices somewhere in the space
+function planVoices(t0) {
+  const ids = S.rvoices.cast.filter(id => voiceBank[id] && voiceBank[id].pauses.length > 1);
+  if (!ids.length) return { items: [], end: t0 + 5 };
+  const shuffled = [...ids].sort(() => Math.random() - .5);
+  const gp = rnd(-.8, .8), dist = Math.min(1, .3 + S.rvoices.dist * .7), items = [];
+  let end = t0;
+  if (S.rvoices.style === 'reading') {          // one person reading aloud for a minute or two
+    const u = utterance(shuffled[0], 40, 110);
+    items.push({ id: shuffled[0], ...u, t: t0, pan: gp, dist });
+    end = t0 + u.dur;
+  } else if (S.rvoices.style === 'conversation') {   // two or three people taking turns
+    const who = shuffled.slice(0, Math.random() < .6 ? 2 : 3), offs = who.map(() => rnd(-.2, .2));
+    let t = t0, i = 0;
+    for (let turn = 3 + Math.floor(rnd(0, 6)); turn > 0; turn--) {
+      const u = utterance(who[i], 2.5, 9);
+      items.push({ id: who[i], ...u, t, pan: gp + offs[i], dist });
+      t += u.dur + rnd(.4, 1.4);
+      i = (i + 1 + Math.floor(rnd(0, who.length - 1))) % who.length;
+    }
+    end = t;
+  } else {                                      // murmur: several people talking at once, further off
+    const span = rnd(20, 50);
+    for (const id of shuffled.slice(0, Math.min(5, ids.length))) {
+      const pan = rnd(-.9, .9);
+      for (let t = t0 + rnd(0, 3); t < t0 + span; ) {
+        const u = utterance(id, 2.5, 8);
+        items.push({ id, ...u, t, pan, dist: Math.min(1, dist + .1) });
+        t += u.dur + rnd(.5, 2.5);
+      }
+    }
+    items.sort((a, b) => a.t - b.t);
+    end = Math.max(...items.map(it => it.t + it.dur));
+  }
+  return { items, end };
+}
+
+let vQueue = [], vNext = 0;
+function voiceTick(sc, horizon) {
+  if (!voiceBank) { loadVoices(); return; }
+  const now = ctx.currentTime;
+  if (!vNext) vNext = now + rnd(2, 6);
+  if (!vQueue.length && vNext < horizon) {
+    const plan = planVoices(Math.max(vNext, now + .1));
+    vQueue = plan.items;
+    // Quiet gap before the next group: ~10 s when "often" is high, a couple of minutes when low
+    vNext = plan.end + expRand(8 + Math.pow(1 - S.rvoices.often, 2) * 150);
+  }
+  while (vQueue.length && vQueue[0].t < horizon) {
+    const it = vQueue.shift();
+    playUtterance(sc, Math.max(it.t, now + .02), it);
+  }
+}
+
+// ---------- Sound drops: your own clips, stored in this browser (IndexedDB) ----------
+const AUDIO_EXT = /\.(mp3|wav|ogg|oga|m4a|aac|flac|opus|webm)$/i;
+const MAX_DROP = 20;   // seconds: longer clips fade out here
+let dropIds = [], dropKeys = new Set(), dropBag = [], dropBytes = 0, dropNext = 0, dropBusy = false;
+const dropBad = new Set();
+
+const dbReady = new Promise((res, rej) => {
+  const r = indexedDB.open('noiseMachine', 1);
+  r.onupgradeneeded = () => r.result.createObjectStore('drops', { keyPath: 'id', autoIncrement: true });
+  r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+});
+// Run fn(store) in a transaction; resolves with the request's result (if fn returns one) once committed
+const idb = (mode, fn) => dbReady.then(db => new Promise((res, rej) => {
+  const tx = db.transaction('drops', mode), req = fn(tx.objectStore('drops'));
+  tx.oncomplete = () => res(req && 'result' in req ? req.result : undefined);
+  tx.onerror = () => rej(tx.error); tx.onabort = () => rej(tx.error);
+}));
+
+async function refreshDrops() {
+  const ids = [], keys = new Set(); let bytes = 0;
+  try {
+    await idb('readonly', st => {
+      const c = st.openCursor();
+      c.onsuccess = () => { const cur = c.result; if (!cur) return;
+        ids.push(cur.key); keys.add(cur.value.name + '|' + cur.value.size); bytes += cur.value.size || 0; cur.continue(); };
+    });
+  } catch (err) { $('dropCount').textContent = 'Clip storage is unavailable in this browser: ' + err.message; return; }
+  dropIds = ids; dropKeys = keys; dropBytes = bytes; dropBag = [];
+  renderDrops();
+}
+
+async function importFiles(files) {
+  const all = [...files].filter(f => f && (AUDIO_EXT.test(f.name) || (f.type || '').startsWith('audio/')));
+  const list = all.filter(f => !dropKeys.has(f.name.replace(/\.[^.]+$/, '') + '|' + f.size));   // skip ones already stored
+  if (!list.length) { $('dropCount').textContent = all.length ? 'Those clips are already stored.' : 'No audio files found there.'; return; }
+  try {
+    for (let i = 0; i < list.length; i += 100) {
+      const batch = list.slice(i, i + 100);
+      await idb('readwrite', st => { batch.forEach(f => st.add({ name: f.name.replace(/\.[^.]+$/, ''), size: f.size, blob: f })); });
+      $('dropCount').textContent = `Importing… ${Math.min(i + 100, list.length).toLocaleString()} / ${list.length.toLocaleString()}`;
+    }
+  } catch (err) { $('dropCount').textContent = 'Import stopped: ' + err.message; }
+  await refreshDrops();
+}
+
+// Dropped folders: walk them recursively
+async function filesFromDrop(dt) {
+  const entries = [...dt.items].map(i => i.webkitGetAsEntry && i.webkitGetAsEntry()).filter(Boolean);
+  if (!entries.length) return [...dt.files];
+  const out = [];
+  const walk = async entry => {
+    if (entry.isFile) out.push(await new Promise(r => entry.file(r, () => r(null))));
+    else if (entry.isDirectory) {
+      const rd = entry.createReader(); let batch;
+      do { batch = await new Promise(r => rd.readEntries(r, () => r([]))); for (const e of batch) await walk(e); } while (batch.length);
+    }
+  };
+  for (const e of entries) await walk(e);
+  return out;
+}
+
+// Shuffle bag: every clip plays once before any repeats
+function nextDropId() {
+  if (!dropBag.length) dropBag = dropIds.filter(id => !dropBad.has(id)).sort(() => Math.random() - .5);
+  return dropBag.pop();
+}
+const dropGapMean = () => 20 + Math.pow(1 - S.drops.often, 2) * 580;   // ~20 s .. ~10 min
+
+async function playDrop() {
+  if (dropBusy || !ctx || !dropIds.length) return;
+  dropBusy = true;
+  try {
+    for (let tries = 0; tries < 5; tries++) {
+      const id = nextDropId(); if (id == null) break;
+      const rec = await idb('readonly', st => st.get(id));
+      let buf;
+      try { buf = await ctx.decodeAudioData(await rec.blob.arrayBuffer()); } catch { dropBad.add(id); continue; }
+      // Loudness safety: even out quiet and blown-out clips, cap the peak, then compress any spikes
+      const ch = buf.getChannelData(0); let pk = 0, ss = 0, n = 0;
+      for (let i = 0; i < ch.length; i += 4) { const a = Math.abs(ch[i]); if (a > pk) pk = a; ss += ch[i] * ch[i]; n++; }
+      const rms = Math.sqrt(ss / Math.max(n, 1)) || 1e-4;
+      const norm = Math.min(.12 / rms, .8 / Math.max(pk, 1e-4));
+      const t = ctx.currentTime + .05, dur = Math.min(buf.duration, MAX_DROP);
+      const s = ctx.createBufferSource(); s.buffer = buf;
+      const env = ctx.createGain();
+      env.gain.setValueAtTime(1, t);
+      if (buf.duration > MAX_DROP) { env.gain.setValueAtTime(1, t + dur - 1.5); env.gain.linearRampToValueAtTime(0, t + dur); }
+      const air = ctx.createBiquadFilter(); air.type = 'lowpass'; air.frequency.value = 400 + 15000 * Math.pow(1 - S.drops.dist, 2);
+      const comp = ctx.createDynamicsCompressor();
+      comp.threshold.value = -20; comp.ratio.value = 8; comp.attack.value = .003; comp.release.value = .25;
+      const out = ctx.createGain(); out.gain.value = norm * S.drops.vol * S.drops.vol * 1.6 * (1 - .4 * S.drops.dist);
+      s.connect(env).connect(air).connect(comp).connect(out);
+      if (S.drops.inScene && scene) place(scene.sc, out, rnd(-.8, .8), S.drops.dist);
+      else { const p = ctx.createStereoPanner(); p.pan.value = rnd(-.4, .4); out.connect(p).connect(master); }
+      s.start(t, 0, dur + .01);
+      $('dropNow').textContent = '♪ ' + rec.name;
+      break;
+    }
+  } finally { dropBusy = false; }
+}
+
+setInterval(() => {
+  if (!playing || !S.drops.on || !dropIds.length) { dropNext = 0; return; }
+  const now = ctx.currentTime;
+  if (!dropNext) dropNext = now + Math.max(8, expRand(dropGapMean()));
+  if (now >= dropNext) { playDrop(); dropNext = now + Math.max(8, expRand(dropGapMean())); }
+}, 1000);
+
+// Scheduler: plans events 1.5 s ahead so background-tab timer slowdowns never cause gaps
+setInterval(() => {
+  if (!playing || !scene) return;
+  scene.control();
+  scene.tick(ctx.currentTime + 1.5);
+  if (S.rvoices.on && CLIPS.length) voiceTick(scene.sc, ctx.currentTime + 1.5);
+  else { vQueue = []; vNext = 0; }
+}, 250);
+
+// ---------- Apply settings to UI and audio ----------
+function renderLayers() {
+  const def = SCENES[S.scene];
+  $('layers').innerHTML = '';
+  $('sceneNote').textContent = def ? def.note : 'Pick a place to add natural sounds around you.';
+  $('sceneCtl').querySelectorAll('.row').forEach(r => r.classList.toggle('off', !def));
+  if (!def) return;
+  for (const [k, label] of def.layers) {
+    const row = document.createElement('div'); row.className = 'row';
+    row.innerHTML = `<label class="t" for="L_${k}">${label}</label><input type="range" id="L_${k}" min="0" max="1" step="0.01">`;
+    const input = row.querySelector('input');
+    input.value = S.scenes[S.scene][k];
+    input.oninput = () => { S.scenes[S.scene][k] = +input.value; save(); };   // live: the scene reads these values directly
+    $('layers').appendChild(row);
+  }
+}
+
+function renderVoices() {
+  const V = S.rvoices;
+  if (!CLIPS.length) {
+    $('voiceNote').textContent = 'voices.js was not found next to this page, so recorded voices are unavailable.';
+    $('voiceOnRow').classList.add('off'); $('voiceCtl').classList.add('off'); return;
+  }
+  if (!$('vcast').children.length)
+    $('vcast').innerHTML = CLIPS.map(c => `<button data-v="${c.id}" title="${c.lang}">${c.label}${c.lang !== 'English' ? ' (' + c.lang + ')' : ''}</button>`).join('');
+  $('voicesOn').checked = V.on;
+  for (const b of $('vstyle').children) b.classList.toggle('on', b.dataset.v === V.style);
+  for (const b of $('vcast').children) b.classList.toggle('on', V.cast.includes(b.dataset.v));
+  $('vOften').value = V.often; $('vDist').value = V.dist; $('vVol').value = V.vol;
+  $('vDistVal').textContent = V.dist > .75 ? 'very far' : V.dist > .4 ? 'across the space' : 'nearby';
+  $('voiceCtl').classList.toggle('off', !V.on || S.scene === 'off');
+  $('voiceOnRow').classList.toggle('off', S.scene === 'off');
+}
+
+function renderDrops() {
+  const D = S.drops, mean = dropGapMean();
+  $('dropsOn').checked = D.on; $('dInScene').checked = D.inScene;
+  $('dOften').value = D.often; $('dVol').value = D.vol; $('dDist').value = D.dist;
+  $('dOftenVal').textContent = '~every ' + (mean < 90 ? Math.round(mean) + ' s' : Math.round(mean / 60) + ' min');
+  $('dDistVal').textContent = D.dist > .7 ? 'far' : D.dist > .35 ? 'across the room' : 'close';
+  $('dropCount').textContent = dropIds.length
+    ? `${dropIds.length.toLocaleString()} clips stored (${(dropBytes / 1048576).toFixed(1)} MB)` : 'No clips stored yet.';
+  $('dropCtl').classList.toggle('off', !D.on);
+}
+
+function render() {
+  renderVoices();
+  renderDrops();
+  for (const [id, key] of [['presets','preset'], ['color','color'], ['mood','mood'], ['scene','scene']])
+    for (const btn of $(id).children) btn.classList.toggle('on', (btn.dataset.p || btn.dataset.v) === S[key]);
+  $('presetName').textContent = S.preset ? '' : 'custom';
+  for (const k of ['vol','tone','width','dvol','density','sceneVol']) $(k).value = S[k];
+  $('drone').checked = S.drone;
+  $('droneSpace').checked = S.droneSpace;
+  $('guard').checked = S.guard;
+  $('timer').value = S.timer;
+  $('droneCtl').classList.toggle('off', !S.drone);
+  const hz = toneHz(S.tone);
+  $('toneVal').textContent = (S.tone < .3 ? 'dark' : S.tone < .6 ? 'soft' : 'bright') + ' · ' + (hz >= 1000 ? (hz/1000).toFixed(1) + ' kHz' : hz + ' Hz');
+  $('widthVal').textContent = S.width < .15 ? 'centred' : S.width > .85 ? 'wide' : '';
+  $('densityVal').textContent = S.density < .33 ? 'sparse' : S.density > .66 ? 'dense' : '';
+  applyAudio();
+}
+
+function applyAudio() {
+  if (!ctx) return;
+  const t = ctx.currentTime;
+  // Squared slider = natural volume curve. Brown gets a boost as its energy sits in the bass;
+  // darker tone settings also remove energy, so compensate a little.
+  const boost = (S.color === 'brown' ? 3 : 1.5) * (1 + (1 - S.tone) * 0.6);
+  noiseGain.gain.setTargetAtTime(S.vol * S.vol * boost, t, 0.05);
+  noiseFilter.frequency.setTargetAtTime(toneHz(S.tone), t, 0.05);
+  droneBus.frequency.setTargetAtTime(MOODS[S.mood].cutoff, t, 1);
+  droneGain.gain.setTargetAtTime(S.drone ? S.dvol * S.dvol * 2 : 0, t, 0.3);
+  droneSend.gain.setTargetAtTime(S.drone && S.droneSpace ? S.dvol * S.dvol * 0.8 : 0, t, 0.3);
+  sceneGain.gain.setTargetAtTime(S.sceneVol * S.sceneVol * 1.5, t, 0.1);
+  if (S.drone && playing) startDrone(); else stopDrone();
+}
+
+// User change: update one setting, drop the preset highlight, remember it
+function set(key, value) { S[key] = value; S.preset = null; save(); render(); }
+
+// ---------- Transport ----------
+async function play() {
+  try {
+    if (!ctx) init();
+    await ctx.resume();
+  } catch (err) { setStatus('Audio failed to start: ' + err.message); return; }
+  playing = true;
+  setStatus('Playing (audio ' + ctx.state + ', ' + ctx.sampleRate + ' Hz)');
+  master.gain.cancelScheduledValues(ctx.currentTime);
+  master.gain.setValueAtTime(0, ctx.currentTime);
+  master.gain.linearRampToValueAtTime(1, ctx.currentTime + 1.5);
+  applyAudio(); startScene(); armTimer();
+  $('play').textContent = 'Stop'; $('play').classList.add('on');
+}
+function stop(fadeSecs = 1) {
+  playing = false; stopDrone(); disarmTimer();
+  const t = ctx.currentTime;
+  master.gain.cancelScheduledValues(t);
+  master.gain.setValueAtTime(master.gain.value, t);
+  master.gain.linearRampToValueAtTime(0, t + fadeSecs);
+  stopScene(fadeSecs);
+  setTimeout(() => { if (!playing) ctx.suspend(); }, fadeSecs * 1000 + 100);
+  $('play').textContent = 'Play'; $('play').classList.remove('on');
+  setStatus('Stopped');
+}
+
+function armTimer() {
+  disarmTimer();
+  const mins = +S.timer;
+  if (!mins || !playing) return;
+  const end = Date.now() + mins * 60000;
+  const tick = () => {
+    const ms = end - Date.now();
+    if (ms <= 0) { stop(30); return; }   // 30 s fade at the end
+    const m = Math.floor(ms / 60000), s = Math.floor(ms / 1000) % 60;
+    $('left').textContent = m + ':' + String(s).padStart(2, '0');
+  };
+  tick(); countdown = setInterval(tick, 1000);
+}
+function disarmTimer() { clearInterval(countdown); $('left').textContent = ''; }
+
+// ---------- Wiring ----------
+$('play').onclick = () => playing ? stop() : play();
+$('presets').onclick = e => {
+  const b = e.target.closest('button'); if (!b) return;
+  S = { ...S, ...PRESETS[b.dataset.p], preset: b.dataset.p }; save(); render();
+};
+$('color').onclick = e => { const b = e.target.closest('button'); if (b) set('color', b.dataset.v); };
+$('mood').onclick  = e => { const b = e.target.closest('button'); if (b) set('mood', b.dataset.v); };
+$('scene').onclick = e => {
+  const b = e.target.closest('button'); if (!b || b.dataset.v === S.scene) return;
+  S.scene = b.dataset.v; save(); render(); renderLayers();
+  if (playing) { stopScene(); startScene(); }
+};
+for (const k of ['vol','tone','width','dvol','density']) $(k).oninput = () => set(k, +$(k).value);
+$('sceneVol').oninput = () => { S.sceneVol = +$('sceneVol').value; save(); applyAudio(); };
+$('drone').onchange = () => set('drone', $('drone').checked);
+$('voicesOn').onchange = () => { S.rvoices.on = $('voicesOn').checked; save(); renderVoices(); };
+$('vstyle').onclick = e => {
+  const b = e.target.closest('button'); if (!b) return;
+  S.rvoices.style = b.dataset.v; vQueue = []; vNext = 0; save(); renderVoices();   // new style starts shortly
+};
+$('vcast').onclick = e => {
+  const b = e.target.closest('button'); if (!b) return;
+  const c = S.rvoices.cast, k = b.dataset.v;
+  if (c.includes(k)) { if (c.length > 1) c.splice(c.indexOf(k), 1); } else c.push(k);   // always keep at least one
+  save(); renderVoices();
+};
+for (const [id, k] of [['vOften','often'], ['vDist','dist'], ['vVol','vol']])
+  $(id).oninput = () => { S.rvoices[k] = +$(id).value; save(); renderVoices(); };
+$('dropsOn').onchange = () => { S.drops.on = $('dropsOn').checked; save(); renderDrops(); };
+$('dInScene').onchange = () => { S.drops.inScene = $('dInScene').checked; save(); };
+for (const [id, k] of [['dOften','often'], ['dVol','vol'], ['dDist','dist']])
+  $(id).oninput = () => { S.drops[k] = +$(id).value; if (k === 'often') dropNext = 0; save(); renderDrops(); };
+$('addFiles').onclick = () => $('fileIn').click();
+$('addFolder').onclick = () => $('folderIn').click();
+for (const id of ['fileIn', 'folderIn']) $(id).onchange = async () => { await importFiles($(id).files); $(id).value = ''; };
+$('dropTest').onclick = () => {
+  if (!dropIds.length) $('dropNow').textContent = 'Add some clips first.';
+  else if (!playing) $('dropNow').textContent = 'Press Play first, then Play one.';
+  else playDrop();
+};
+$('dropClear').onclick = async () => {
+  if (!dropIds.length || !confirm(`Remove all ${dropIds.length.toLocaleString()} stored clips from this browser?`)) return;
+  await idb('readwrite', st => { st.clear(); });
+  refreshDrops();
+};
+// Drag and drop onto the clip box; anywhere else, stop the browser from opening the file instead
+$('dropZone').addEventListener('dragover', e => { e.preventDefault(); $('dropZone').style.borderColor = 'var(--accent)'; });
+$('dropZone').addEventListener('dragleave', () => { $('dropZone').style.borderColor = ''; });
+$('dropZone').addEventListener('drop', async e => {
+  e.preventDefault(); e.stopPropagation(); $('dropZone').style.borderColor = '';
+  $('dropCount').textContent = 'Reading files…';
+  importFiles(await filesFromDrop(e.dataTransfer));
+});
+window.addEventListener('dragover', e => e.preventDefault());
+window.addEventListener('drop', e => e.preventDefault());
+$('droneSpace').onchange = () => { S.droneSpace = $('droneSpace').checked; save(); applyAudio(); };
+$('timer').onchange = () => { S.timer = +$('timer').value; save(); armTimer(); };
+$('guard').onchange = () => { S.guard = $('guard').checked; save(); };
+window.onerror = msg => setStatus('Error: ' + msg);
+document.addEventListener('keydown', e => {
+  if (e.code === 'Space' && !['SELECT','BUTTON','INPUT'].includes(e.target.tagName)) { e.preventDefault(); $('play').click(); }
+});
+
+// Unplug guard: Windows reports an output device change when a jack or USB device goes away.
+// Cut the sound immediately (no fade) and suspend, so nothing carries on through the laptop speakers.
+// It never restarts by itself; press Play again once the headphones are back.
+navigator.mediaDevices?.addEventListener('devicechange', () => {
+  if (!S.guard || !playing) return;
+  master.gain.cancelScheduledValues(0);
+  master.gain.value = 0;
+  ctx.suspend();
+  stop(0);
+  setStatus('Stopped: an audio device was unplugged or changed (' + new Date().toLocaleTimeString() + ')');
+});
+render(); renderLayers(); refreshDrops();
+</script>
+</body>
+</html>
